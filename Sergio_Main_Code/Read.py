@@ -74,7 +74,8 @@ def Read_Time(Sim):
 	Time = []
 	
 	if Sim == 'B':
-		F = open("Data/Time.ser", "r")#Stell_Real_DC2.ser
+		#CHANGE HERE THE DIR
+		F = open("Data/Time.txt", "r")#Stell_Real_DC2.ser
 		for i in range(20):
 			Redshift.append(0)
 			Time.append(0)
@@ -86,7 +87,7 @@ def Read_Time(Sim):
 			Redshift.append(z)
 			Time.append(M.LBtime(z,70.5,0.27,0.73,8.25e-5))
 	elif Sim == 'MI':
-		F = open("Data/Time_MI.ser", "r")#Stell_Real_DC2.ser
+		F = open("Data/Time_MI.txt", "r")#Stell_Real_DC2.ser
 		for i in range(201):
 			Redshift.append(0)
 			Time.append(0)
@@ -97,7 +98,7 @@ def Read_Time(Sim):
 			Redshift[137+int(L[0])] = float(L[1])
 			Time[137+int(L[0])] = float(L[3])
 	elif Sim == 'MII':
-		F = open("Data/Time_MII.ser", "r")#Stell_Real_DC2.ser
+		F = open("Data/Time_MII.txt", "r")#Stell_Real_DC2.ser
 		for i in range(201):
 			Redshift.append(0)
 			Time.append(0)

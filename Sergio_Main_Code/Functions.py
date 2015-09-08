@@ -130,7 +130,44 @@ def Get_Random_J(J,Mass):
 		for i in Sel_ID[0]:
 			Jr[Snap2][i] = M.Ang_Rand(Jr[Snap2+1][i][0],Jr[Snap2+1][i][1],Jr[Snap2+1][i][2],Alpha[i])
 		#print Snap,'\r'
-	return Jr		
+	return Jr
+def MOD(A):#Por ahora 3
+	Sum = 0
+	for a in A:	Sum += a*a
+	return np.sqrt(Sum)
+	
+def Get_Random_J2(J,Mass,Ratio = -1):
+	Jr = np.zeros((len(J),len(J[0]),len(J[0][0])))-99
+	Jr[0] = J[0]
+	for Snap in range(D.End_Snap+1,D.Init_Snap+1):
+		Snap2 = Snap - D.End_Snap 
+		Sel_ID = np.where((Mass[Snap2-1] > 0) & (J[Snap2-1][:,0] != -99))
+		New_ID = np.where((Mass[Snap2-1] <= 0) & (Mass[Snap2] > 0) & (J[Snap2][:,0] != -99) )
+		ModA2 = J[Snap2-1][:,0]**2 +J[Snap2-1][:,1]**2 +J[Snap2-1][:,2]**2
+		ModB2 = J[Snap2][:,0]**2 +J[Snap2][:,1]**2 +J[Snap2][:,2]**2
+		Alpha = np.arccos(np.einsum('ij,ij->i',J[Snap2-1],J[Snap2])/np.sqrt(ModA2*ModB2))
+		if  Snap2 > 1:	
+			ModA2 = J[Snap2-2][:,0]**2 +J[Snap2-2][:,1]**2 +J[Snap2-2][:,2]**2
+			ModB2 = J[Snap2-1][:,0]**2 +J[Snap2-1][:,1]**2 +J[Snap2-1][:,2]**2
+			Alpha2 = np.arccos(np.einsum('ij,ij->i',J[Snap2-2],J[Snap2-1])/np.sqrt(ModA2*ModB2))
+		Jr[Snap2][New_ID] = J[Snap2][New_ID]
+		for i in Sel_ID[0]:
+			Jr[Snap2][i] = M.Ang_Rand(Jr[Snap2-1][i][0],Jr[Snap2-1][i][1],Jr[Snap2-1][i][2],Alpha[i])
+			if  Snap2 > 1 and (Jr[Snap2-2][i][0] != -99) :
+				count = 0
+				Diff1 = [Jr[Snap2-2][i][0]-Jr[Snap2-1][i][0],Jr[Snap2-2][i][1]-Jr[Snap2-1][i][1],Jr[Snap2-2][i][2]-Jr[Snap2-1][i][2]]
+				Diff1 /= MOD(Diff1)
+				while True:
+					Jr[Snap2][i] = M.Ang_Rand(Jr[Snap2-1][i][0],Jr[Snap2-1][i][1],Jr[Snap2-1][i][2],Alpha[i])
+					Diff2 = [Jr[Snap2-1][i][0]-Jr[Snap2  ][i][0],Jr[Snap2-1][i][1]-Jr[Snap2  ][i][1],Jr[Snap2-1][i][2]-Jr[Snap2  ][i][2]]
+					Diff2 /= MOD(Diff2)
+					if Dot(Diff1[0],Diff1[1],Diff1[2],Diff2[0],Diff2[1],Diff2[2]) > Ratio or Alpha[i] > np.pi/4 or Alpha2[i] > np.pi/4:	break
+					if count > 3000:
+						print 'WARNING IN COUNT',count,Diff1,Diff2,Dot(Diff1[0],Diff1[1],Diff1[2],Diff2[0],Diff2[1],Diff2[2]),Alpha[i],Alpha2[i]
+						break
+					count += 1
+		print Snap
+	return Jr
 		
 def Neg_Mass_Status(Mass,Crit = 1):
 	Pre_Status = np.zeros((len(Mass),len(Mass[0])),dtype=bool)
@@ -300,86 +337,88 @@ def Abs_ChangeJ_Full(J,Jr,Mass,INSnap,time,Jump2Mill = False,Cosmic_Web = -1, We
 		print time[Snap],M.AMedian(Dir1),String_Array(Dir1_M)
 		if Snap == D.Init_Snap:	break
 	
+def MOD(A):#Por ahora 3
+	Sum = 0
+	for a in A:	Sum += a*a
+	return np.sqrt(Sum)
 	
-#def Abs_ChangeJ_Full(J,Jr,Mass,INSnap,time,Jump2Mill = False,Cosmic_Web = -1, Web = [],WebID = -2):#D.LSnap[Id+1]
-	###
-	#if Jump2Mill:
-		#F1 = open("Data_Track/ChangeJ_MillTime_"+str(INSnap)+".ser", "w")
-		#F2 = open("Data_Track/ChangeDir_MillTime_"+str(INSnap)+".ser", "w")
-		#F3 = open("Data_Track/Jratio_MillTime_"+str(INSnap)+".ser", "w")
-		#FR1 = open("Data_Track/ChangeJ_R_MillTime_"+str(INSnap)+".ser", "w")
-		#FR2 = open("Data_Track/ChangeDir_R_MillTime_"+str(INSnap)+".ser", "w")
-	#else:
-		#F1 = open("Data_Track/ChangeJ_"+str(INSnap)+".ser", "w")
-		#F2 = open("Data_Track/ChangeDir_"+str(INSnap)+".ser", "w")
-		#F3 = open("Data_Track/Jratio_"+str(INSnap)+".ser", "w")
-		#FR1 = open("Data_Track/ChangeJ_R_"+str(INSnap)+".ser", "w")
-		#FR2 = open("Data_Track/ChangeDir_R_"+str(INSnap)+".ser", "w")
+def UNI(A):
+	Ar = np.array(A)
+	M = MOD(Ar)
+	return Ar/M
+	
+def Proj_Angle(J,Mass,INSnap, Jump2Mill = False):
+	
+	Sel_ID = np.where(Mass[INSnap - D.End_Snap] > 0)
+	Angle = []
+	Angle2 = []
+	for i in range(D.Init_Snap- D.End_Snap +1):
+		Angle2.append([])
+		Angle.append([])
+	np.zeros((len(J),len(J[0]),len(J[0][0])))-99
+	Snap  = INSnap 
+	
+	while True:
+		if not Jump2Mill:	Snap+=1
+		else:
+			id_InMill2 += 1
+			Snap = D.LSnap[id_InMill2]
+		Snap2 = Snap - D.End_Snap 
 		
-	#print >>F1, "# Time	alpha	alpha_dM1	alpha_dM2	alpha_dM3	alpha_dM4	alpha_dM5	"
-	#print >>F2, "# Time	alpha	alpha_dM1	alpha_dM2	alpha_dM3	alpha_dM4	alpha_dM5	"
-	#print >>F3, "# Time	alpha	alpha_dM1	alpha_dM2	alpha_dM3	alpha_dM4	alpha_dM5	"
-	#print >>FR1, "# Time	alpha	alpha_dM1	alpha_dM2	alpha_dM3	alpha_dM4	alpha_dM5	"
-	#print >>FR2, "# Time	alpha	alpha_dM1	alpha_dM2	alpha_dM3	alpha_dM4	alpha_dM5	"
-	###
-	#Dir1 = []
-	#Dir1_M = []
-	#Dir2 = []
-	#Dir2_M = []
-	#Dir3 = []
-	#Dir3_M = []
-	#DirR1 = []
-	#DirR1_M = []
-	#DirR2 = []
-	#DirR2_M = []
-	#for i in range(len(D.DM)-1):
-		#Dir1_M.append([])
-		#Dir2_M.append([])
-		#Dir3_M.append([])
-		#DirR1_M.append([])
-		#DirR2_M.append([])
-	###
-	#Snap  = INSnap -1
-	#Sel_ID = np.where(Mass[INSnap - D.End_Snap] > 0)
-	#id_InMill0 = np.where(np.array(D.LSnap) == INSnap)[0][0]
-	#id_InMill2 = id_InMill0-1
-	###
-	
-	#while True:
-		#if not Jump2Mill:	Snap+=1
-		#else:
-			#id_InMill2 += 1
-			#Snap = D.LSnap[id_InMill2]
-		#Snap2 = Snap - D.End_Snap 
-		#for i in Sel_ID[0]:
-			#for j in range(1,len(D.DM)):
-				#dm = len(D.DM) - 1
-				#if Mass[Snap2][i] < D.DM[j]:
-					#dm = j - 1
-					#break
-			#Dir1.append(      Dot(J[INSnap - D.End_Snap][i][0],J[INSnap - D.End_Snap][i][1],J[INSnap - D.End_Snap][i][2],J[Snap2][i][0],J[Snap2][i][1],J[Snap2][i][2]))
-			#Dir1_M[dm].append(Dir1[-1])
-			
-			#DirR1.append(      Dot(Jr[INSnap - D.End_Snap][i][0],Jr[INSnap - D.End_Snap][i][1],Jr[INSnap - D.End_Snap][i][2],Jr[Snap2][i][0],Jr[Snap2][i][1],Jr[Snap2][i][2]))
-			#DirR1_M[dm].append(DirR1[-1])
-			
-			#Dir3.append(      Dir1[-1]/DirR1[-1])
-			#Dir3_M[dm].append(Dir3[-1])
-			
-			#if INSnap != Snap:
-				#if not Jump2Mill:
-					#Snap_1 = INSnap - D.End_Snap
-					#Snap_2 = INSnap - D.End_Snap + 1 
-					#Snap_3 = Snap2 - 1
-					#Snap_4 = Snap2 
-				#else:
-					#Snap_1 = INSnap - D.End_Snap
-					#Snap_2 = D.LSnap[id_InMill0 + 1]
-					#Snap_3 = D.LSnap[id_InMill2 - 1]
-					#Snap_4 = Snap2
-				#Dir2.append(      CAngle3(J[INSnap - D.End_Snap][i][0],J[INSnap - D.End_Snap][i][1],J[INSnap - D.End_Snap][i][2],J[Snap2][i][0],J[Snap2][i][1],J[Snap2][i][2]))
-				#Dir2_M[dm].append(Dir2[-1])
-			
-			
-		#print >>F,  time[Snap],M.AMedian(Dir),String_Array(Dir_M)
-		#if Snap == D.Init_Snap:	break
+		n  =  J[Snap2-1][Sel_ID] + J[Snap2-2][Sel_ID]
+		dJ1 = J[Snap2-1][Sel_ID] - J[Snap2-2][Sel_ID]
+		dJ2 = J[Snap2  ][Sel_ID] - J[Snap2-1][Sel_ID]
+		n_mod = np.sqrt(n[:,0]**2 +n[:,1]**2 +n[:,2]**2)
+		dJ1_mod = np.sqrt(dJ1[:,0]**2 +dJ1[:,1]**2 +dJ1[:,2]**2)
+		dJ2_mod = np.sqrt(dJ2[:,0]**2 +dJ2[:,1]**2 +dJ2[:,2]**2)
+		n /= n_mod[:,None]
+		dJ1 /= dJ1_mod[:,None]
+		dJ2 /= dJ2_mod[:,None]
+		dJ2_P = dJ2 + n*np.einsum('ij,ij->i',n,dJ2)[:,None]
+		dJ2_P_M = np.sqrt(dJ2_P[:,0]**2 +dJ2_P[:,1]**2 +dJ2_P[:,2]**2)
+		Angle_Single = np.einsum('ij,ij->i',dJ1,dJ2_P/dJ2_P_M[:,None])
+		Angle_Single2 = np.einsum('ij,ij->i',dJ1,dJ2)
+		Angle[Snap2] = Angle_Single
+		Angle2[Snap2] = Angle_Single2
+		if Snap == D.Init_Snap:	break	
+	return np.array(Angle),np.array(Angle2)
+
+#def HISTO_2D(ID,J,DO_MillSnap = False):
+    ## THE DO_MILLSNAP IS NOT READY, IS TO MAKE CONSIDE THE SNAPSHOT TIMES TO THE ONES IN THE MILL. SIM.
+    ## NOTE, IT ACTUALLY WORKS, BUT HAVE NOT BEEN TESTED, USED UNDER YOUR OWN RISK
+    #if DO_MillSnap:
+        #Snap01 = D.LSnap[-1] - D.End_Snap
+        #Snap02 = D.LSnap[-2] - D.End_Snap
+        #Snap03 = D.LSnap[-3] - D.End_Snap
+    #else:
+        #Snap01 = D.Init_Snap - D.End_Snap
+        #Snap02 = Snap01 - 1
+        #Snap03 = Snap02 - 1
+    #ID_to_Look = np.where(ID[Snap03] > -1)
+    #Angl1 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE FIRST TWO SNAPSHOTS
+    #Angl2 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE SECOND AND THIRD SNAPSHOT
+    #Angl3 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE FIRST AND THIRD SNAPSHOT
+    #Angl4 = [] # THE CHANGE OF ANGLE BETWEEN THE FIRST AND THIRD SNAPSHOT IN CASE
+               ## OF A RANDOM ORIENTATION BETWEEN THE ANGELS
+    #CAngl = [] # NOT IN USE!
+    #IDs = 0
+    ###
+    #for i in ID_to_Look[0]:
+        #Angl1.append(M.Angle(J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2]))
+        #Angl2.append(M.Angle(J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
+        #Angl3.append(M.Angle(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
+        #CAngl.append(CAngle(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
+        ## I CALCULATE THE CHANGE OF ANGLE BETWEEN THE SNAPSHOT
+        #########
+        #Rand_Jx1,Rand_Jy1,Rand_Jz1 =  M.Ang_Rand(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],Angl1[IDs])
+        #Rand_Jx2,Rand_Jy2,Rand_Jz2 =  M.Ang_Rand(Rand_Jx1,Rand_Jy1,Rand_Jz1,Angl2[IDs])
+        #Angl4.append(M.Angle(Rand_Jx2,Rand_Jy2,Rand_Jz2,J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2]))
+        ## I CALCULATE THE CHANGE OF ANGLE BETWEEN THE SNAPSHOT FOR RANDOM ORIENTATED ANGLES (SEE EXPLANATION OF RANDOM ANGLE IN THE NEXT CELL)
+        ########
+        #IDs += 1
+    #if not DO_MillSnap: P.Print_Basic2([Angl1,Angl2,Angl3,Angl4,CAngl],'Data_2DHisto/2D_Histo_Data.txt') 
+    #else: P.Print_Basic2([Angl1,Angl2,Angl3,Angl4,CAngl],'Data_2DHisto/2D_Histo_Data_MillTime.txt')
+    
+    
+    
+    
