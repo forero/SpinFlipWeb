@@ -1,1 +1,14 @@
-Explanation TBD
+-La idea del codigo es usar solo el ipythone notebook, exepto para cambiar los archivos de lectura (que subi
+a geryon y/o estan en esta carpeta) /data3/stcontre/Bolshoi2/
+En este momento, por alguna extragna razon, cree los archivos pero me los cambio de permiso, ni siquiera yo
+puedo leerlos, esto sera corregido a la brevedad
+
+-Se deve modificar el archivo de lectura de la cosmic web (en el notebook) y de los archivos de la bolshoi (en
+Database.py)
+
+-En el notebook bar explicado paso a paso como funciona el codigo, pero cualquier duda contactarme (stcontre@uc.cl)
+
+el codigo esta bajo constante actualizacion, esta es una version moderna de un antiguo codigo, mucho mas ineficiente,
+en la actualidad el unico proceso que toma su tiempo (~ 1 hora por output, normalmente no mas de un output es necesario,
+vienen 2 por defecto en el notebook (Track_Snap = [111,79])) es la creacion de los halos random (ver notebook para mas detalle)
+y espero mejorar eso pronto.

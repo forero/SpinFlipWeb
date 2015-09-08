@@ -40,4 +40,5 @@ def Get_Name(i):
 	#Main_Root = "/home/sergio/Escritorio/Projects/Dropbox/Dropbox_DATA/Bolch/Bolch_SN"
 	#Main_Root = "/home/sergio/Escritorio/Projects/Data/Bolchoi/UNC/Bolch_SN"
 	Main_Root = "/home/sergio/Escritorio/Projects/Data/"+Sim_Name+"/"+Sim_Name+"_SN"
+	#CHANGE HERE THE DIR
 	return Main_Root+str(i)+"v2.ser"
