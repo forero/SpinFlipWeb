@@ -61,6 +61,32 @@ def Bars(Xmin,Xmax,NBin,X,Y):
 			Data2[2].append(-99)
 	return Axis,Data2
 
+def BarsV2(Xmin,Xmax,NBin,X,Y,bar = 0.2):
+	Axis = []
+	Data = []
+	for i in range(NBin):	
+		Data.append([])
+		Axis.append(Xmin + (i+0.5)*(Xmax-Xmin)/float(NBin))
+	for i in range(len(X)):
+		index = int(NBin*(X[i]-Xmin)/(Xmax-Xmin))
+		if index >= 0 and index < NBin:	Data[index].append(Y[i])
+	for i in range(NBin):	Data[i].sort()
+	Data2 = [[],[],[]]
+	for i in range(NBin):	
+		if len(Data[i]) > 4:
+			Data2[1].append(Data[i][int(len(Data[i])*bar)])
+			Data2[0].append(Data[i][int(len(Data[i])/2.)])
+			Data2[2].append(Data[i][int(4.*len(Data[i])*bar)])
+		elif len(Data[i]) > 0:
+			Data2[1].append(min(Data[i]))
+			Data2[0].append(np.median(Data[i]))
+			Data2[2].append(max(Data[i]))
+		else:
+			Data2[1].append(-99)
+			Data2[0].append(-99)
+			Data2[2].append(-99)
+	return Axis,Data2
+
 def Int1(F,x1,x2,N):
 	Sum = 0
 	dx = (x2-x1)/float(N)

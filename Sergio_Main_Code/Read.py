@@ -37,7 +37,7 @@ def Read_Main(snap):
 	Largo = len(ID)
 	#print '\n\nREAD CHECK', Largo,Largo-len(New_ID),Largo-len(J[0]),Largo-len(J[1]),Largo-len(J[2])
 	return array(ID),array(New_ID),array(Npart),array(J)
-def Read_Step0(snap,Using_Web = False,Web = []):
+def Read_Step0(snap,Using_Web = False,Web1 = [],Web2 = []):
 	Name = D.Get_Name(snap)
 	F = open(Name, "r")#Stell_Real_DC2.ser
 	i = 0
@@ -45,7 +45,8 @@ def Read_Step0(snap,Using_Web = False,Web = []):
 	New_ID = []
 	Npart = []
 	J = []
-	Web_Status = []
+	Web_Status1 = []
+	Web_Status2 = []
 	while True:
 		linea = F.readline()
 		L = linea.split()
@@ -56,14 +57,16 @@ def Read_Step0(snap,Using_Web = False,Web = []):
 				New_ID.append(long(L[1]))
 				Npart.append(float(L[2]))
 				J.append(array([float(L[-3]),float(L[-2]),float(L[-1])]))
-				if Using_Web:	Web_Status.append(Cosmic_Status(float(L[-6]),float(L[-5]),float(L[-4]),256,Web))
+				if Using_Web:
+					Web_Status1.append(Cosmic_Status(float(L[-6]),float(L[-5]),float(L[-4]),256,Web1))
+					Web_Status2.append(Cosmic_Status(float(L[-6]),float(L[-5]),float(L[-4]),256,Web2))
 				i += 1
 				#if i > 200:	break
 		except ValueError:
 			pass
 	F.close()
 	Largo = len(ID)
-	if Using_Web:	return array(ID),array(New_ID),array(Npart),array(J),array(Web_Status)
+	if Using_Web:	return array(ID),array(New_ID),array(Npart),array(J),array(Web_Status1,dtype = np.int8),array(Web_Status2,dtype = np.int8)
 	return array(ID),array(New_ID),array(Npart),array(J)
 
 
@@ -114,7 +117,9 @@ def Read_Time(Sim):
 	return Redshift,Time
 def Read_CW(filename,grid):
 	F = open(filename, "r")
-	Web = empty([grid,grid,grid],dtype=list)
+	#Web = empty([grid,grid,grid],dtype=list)
+	Web1 = np.zeros((grid,grid,grid),dtype=np.int8)
+	Web2 = np.zeros((grid,grid,grid),dtype=np.int8)
 	while True:
 		linea = F.readline()
 		L = linea.split()
@@ -124,5 +129,7 @@ def Read_CW(filename,grid):
 			yi = int(L[1])
 			zi = int(L[2])
 			#print xi,yi,zi,int(float(L[3])),int(float(L[4])),Web[0][0][0]
-			Web[xi][yi][zi] = [int(float(L[3])),int(float(L[4]))]
-	return Web
+			#Web[xi][yi][zi] = [int(float(L[3])),int(float(L[4]))]
+			Web1[xi][yi][zi] = np.int8(float(L[3]))
+			Web2[xi][yi][zi] = np.int8(float(L[4]))
+	return Web1,Web2

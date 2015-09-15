@@ -1,0 +1,9 @@
+Los dos codigos hacen lo mismo (el viejo funciona pero es mas ineficiente,
+el nuevo jamas lo he probado pero deveria ser mucho mas rapido que el viejo
+y hacer lo mismo
+
+Lo que hacen es cojer 2 archivo de texto gigante con la informacion de las CWs
+(indicada en el archivo Main.py) y lo simplifica a 5 columnas, ix,iy,iz,status-Tweb,status-Vweb
+con los status un indice de 0-3 que indica el numero de autovalores de la Web mayor a cierto valor
+(0.4, se puede cambiar en el Main) y dependiendo su valor la la clasificacion de la web 
+(0,1,2,3 == Void,Wall,Filament,Knot)
