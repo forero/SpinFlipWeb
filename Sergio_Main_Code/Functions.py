@@ -2,6 +2,7 @@
 import numpy as np
 import Mate as M
 import Database as D
+import Print as P
 ################################################ Functions ##################################################
 
 def Locate_Prog(a,b,Des_ID,Arr_Pro_N_ID):
@@ -334,7 +335,7 @@ def Abs_ChangeJ_Full(J,Jr,Mass,INSnap,time,Jump2Mill = False,Cosmic_Web = -1, We
 		print >>FR1,  time[Snap],M.AMedian(Dir1r),String_Array(Dir1r_M)
 		print >>FR2,  time[Snap],M.AMedian(Dir2r),String_Array(Dir2r_M)
 		
-		print time[Snap],M.AMedian(Dir1),String_Array(Dir1_M)
+		#print time[Snap],M.AMedian(Dir1),String_Array(Dir1_M)
 		if Snap == D.Init_Snap:	break
 	
 def MOD(A):#Por ahora 3
@@ -347,7 +348,7 @@ def UNI(A):
 	M = MOD(Ar)
 	return Ar/M
 	
-def Proj_Angle(J,Mass,INSnap, Jump2Mill = False):
+def Proj_Angle(J,Mass,INSnap,time,dT = 0.5):
 	
 	Sel_ID = np.where(Mass[INSnap - D.End_Snap] > 0)
 	Angle = []
@@ -357,68 +358,182 @@ def Proj_Angle(J,Mass,INSnap, Jump2Mill = False):
 		Angle.append([])
 	np.zeros((len(J),len(J[0]),len(J[0][0])))-99
 	Snap  = INSnap 
-	
+	Snap2 = Snap - D.End_Snap 
+	Snap2_4 = -99
+	Snap2_3 = -99
+	Snap2_2 = -99
+	Nhalo = 0
+	#J_Mod = np.sqrt(J[:,:,0]**2 +J[:,:,1]**2 +J[:,:,2]**2)
+	#J_New = J/J_Mod[:,:,None]
 	while True:
-		if not Jump2Mill:	Snap+=1
-		else:
-			id_InMill2 += 1
-			Snap = D.LSnap[id_InMill2]
+		
+		if Snap2_4 != -99:
+			
+			J3 =  np.average(J[Snap2_4:Snap2_3],axis=0)[Sel_ID]
+			J2 =  np.average(J[Snap2_3:Snap2_2],axis=0)[Sel_ID]
+			J1 =  np.average(J[Snap2_2:Snap2],axis=0)[Sel_ID]
+			#J3 =  J[Snap2_3][Sel_ID]
+			#J2 =  J[Snap2_2][Sel_ID]
+			#J1 =  J[Snap2][Sel_ID]
+			n  =  J2 + J3
+			dJ1 = J2 - J3
+			dJ2 = J1 - J2
+			n_mod = np.sqrt(n[:,0]**2 +n[:,1]**2 +n[:,2]**2)
+			dJ1_mod = np.sqrt(dJ1[:,0]**2 +dJ1[:,1]**2 +dJ1[:,2]**2)
+			dJ2_mod = np.sqrt(dJ2[:,0]**2 +dJ2[:,1]**2 +dJ2[:,2]**2)
+			n /= n_mod[:,None]
+			dJ1 /= dJ1_mod[:,None]
+			dJ2 /= dJ2_mod[:,None]
+			dJ2_P = dJ2 + n*np.einsum('ij,ij->i',n,dJ2)[:,None]
+			dJ2_P_M = np.sqrt(dJ2_P[:,0]**2 +dJ2_P[:,1]**2 +dJ2_P[:,2]**2)
+			Angle_Single = np.einsum('ij,ij->i',dJ1,dJ2_P/dJ2_P_M[:,None])
+			Angle_Single2 = np.einsum('ij,ij->i',dJ1,dJ2)
+			Angle[Snap2] = Angle_Single
+			Angle2[Snap2] = Angle_Single2
+			#print Snap2_4,Snap2_3,Snap2_2,Snap2,np.arccos(np.median(np.array(Angle[Snap2])))/np.pi*180
+		if  len(time[Snap:]) < 3:	break	
+		Ab_Time = time[(Snap+1):]
+		Ab_Time =  abs(-time[(Snap+1):] + time[Snap] - dT)
+		Snap = np.where(min(Ab_Time) == Ab_Time)[0][0]+(Snap+1)
+		#Snap +=1
+		Snap2_4 = Snap2_3
+		Snap2_3 = Snap2_2
+		Snap2_2 = Snap2
 		Snap2 = Snap - D.End_Snap 
 		
-		n  =  J[Snap2-1][Sel_ID] + J[Snap2-2][Sel_ID]
-		dJ1 = J[Snap2-1][Sel_ID] - J[Snap2-2][Sel_ID]
-		dJ2 = J[Snap2  ][Sel_ID] - J[Snap2-1][Sel_ID]
-		n_mod = np.sqrt(n[:,0]**2 +n[:,1]**2 +n[:,2]**2)
-		dJ1_mod = np.sqrt(dJ1[:,0]**2 +dJ1[:,1]**2 +dJ1[:,2]**2)
-		dJ2_mod = np.sqrt(dJ2[:,0]**2 +dJ2[:,1]**2 +dJ2[:,2]**2)
-		n /= n_mod[:,None]
-		dJ1 /= dJ1_mod[:,None]
-		dJ2 /= dJ2_mod[:,None]
-		dJ2_P = dJ2 + n*np.einsum('ij,ij->i',n,dJ2)[:,None]
-		dJ2_P_M = np.sqrt(dJ2_P[:,0]**2 +dJ2_P[:,1]**2 +dJ2_P[:,2]**2)
-		Angle_Single = np.einsum('ij,ij->i',dJ1,dJ2_P/dJ2_P_M[:,None])
-		Angle_Single2 = np.einsum('ij,ij->i',dJ1,dJ2)
-		Angle[Snap2] = Angle_Single
-		Angle2[Snap2] = Angle_Single2
-		if Snap == D.Init_Snap:	break	
+		
 	return np.array(Angle),np.array(Angle2)
 
-#def HISTO_2D(ID,J,DO_MillSnap = False):
-    ## THE DO_MILLSNAP IS NOT READY, IS TO MAKE CONSIDE THE SNAPSHOT TIMES TO THE ONES IN THE MILL. SIM.
-    ## NOTE, IT ACTUALLY WORKS, BUT HAVE NOT BEEN TESTED, USED UNDER YOUR OWN RISK
-    #if DO_MillSnap:
-        #Snap01 = D.LSnap[-1] - D.End_Snap
-        #Snap02 = D.LSnap[-2] - D.End_Snap
-        #Snap03 = D.LSnap[-3] - D.End_Snap
-    #else:
-        #Snap01 = D.Init_Snap - D.End_Snap
-        #Snap02 = Snap01 - 1
-        #Snap03 = Snap02 - 1
-    #ID_to_Look = np.where(ID[Snap03] > -1)
-    #Angl1 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE FIRST TWO SNAPSHOTS
-    #Angl2 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE SECOND AND THIRD SNAPSHOT
-    #Angl3 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE FIRST AND THIRD SNAPSHOT
-    #Angl4 = [] # THE CHANGE OF ANGLE BETWEEN THE FIRST AND THIRD SNAPSHOT IN CASE
-               ## OF A RANDOM ORIENTATION BETWEEN THE ANGELS
-    #CAngl = [] # NOT IN USE!
-    #IDs = 0
-    ###
-    #for i in ID_to_Look[0]:
-        #Angl1.append(M.Angle(J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2]))
-        #Angl2.append(M.Angle(J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
-        #Angl3.append(M.Angle(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
-        #CAngl.append(CAngle(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
-        ## I CALCULATE THE CHANGE OF ANGLE BETWEEN THE SNAPSHOT
-        #########
-        #Rand_Jx1,Rand_Jy1,Rand_Jz1 =  M.Ang_Rand(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],Angl1[IDs])
-        #Rand_Jx2,Rand_Jy2,Rand_Jz2 =  M.Ang_Rand(Rand_Jx1,Rand_Jy1,Rand_Jz1,Angl2[IDs])
-        #Angl4.append(M.Angle(Rand_Jx2,Rand_Jy2,Rand_Jz2,J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2]))
-        ## I CALCULATE THE CHANGE OF ANGLE BETWEEN THE SNAPSHOT FOR RANDOM ORIENTATED ANGLES (SEE EXPLANATION OF RANDOM ANGLE IN THE NEXT CELL)
+def Proj_Angle_2(J,Mass,INSnap,time,dT = 0.5,bar = 0.1):
+	
+	Sel_ID = np.where(Mass[INSnap - D.End_Snap] > 0)
+	Angle = []
+	Angle2 = []
+	for i in range(D.Init_Snap- D.End_Snap +1):
+		Angle2.append([])
+		Angle.append([])
+	np.zeros((len(J),len(J[0]),len(J[0][0])))-99
+	Snap  = INSnap 
+	Snap2 = Snap - D.End_Snap 
+	Snap2_4 = -99
+	Snap2_3 = -99
+	Snap2_2 = -99
+	Nhalo = 0
+	#J_Mod = np.sqrt(J[:,:,0]**2 +J[:,:,1]**2 +J[:,:,2]**2)
+	#J_New = J/J_Mod[:,:,None]
+	while True:
+		
+		if Snap2_4 != -99:
+			Index = Top_Index(Mass[Snap2][Sel_ID],J[Snap2][Sel_ID],bar = bar)
+			J3 =  np.average(J[Snap2_4:Snap2_3],axis=0)[Sel_ID][Index]
+			J2 =  np.average(J[Snap2_3:Snap2_2],axis=0)[Sel_ID][Index]
+			J1 =  np.average(J[Snap2_2:Snap2],axis=0)[Sel_ID][Index]
+			#J3 =  J[Snap2_3][Sel_ID][Index]
+			#J2 =  J[Snap2_2][Sel_ID][Index]
+			#J1 =  J[Snap2][Sel_ID][Index]
+			n  =  J2 + J3
+			dJ1 = J2 - J3
+			dJ2 = J1 - J2
+			n_mod = np.sqrt(n[:,0]**2 +n[:,1]**2 +n[:,2]**2)
+			dJ1_mod = np.sqrt(dJ1[:,0]**2 +dJ1[:,1]**2 +dJ1[:,2]**2)
+			dJ2_mod = np.sqrt(dJ2[:,0]**2 +dJ2[:,1]**2 +dJ2[:,2]**2)
+			n /= n_mod[:,None]
+			dJ1 /= dJ1_mod[:,None]
+			dJ2 /= dJ2_mod[:,None]
+			dJ2_P = dJ2 + n*np.einsum('ij,ij->i',n,dJ2)[:,None]
+			dJ2_P_M = np.sqrt(dJ2_P[:,0]**2 +dJ2_P[:,1]**2 +dJ2_P[:,2]**2)
+			Angle_Single = np.einsum('ij,ij->i',dJ1,dJ2_P/dJ2_P_M[:,None])
+			Angle_Single2 = np.einsum('ij,ij->i',dJ1,dJ2)
+			Angle[Snap2] = Angle_Single
+			Angle2[Snap2] = Angle_Single2
+			#print Snap2_4,Snap2_3,Snap2_2,Snap2,np.arccos(np.median(np.array(Angle[Snap2])))/np.pi*180,len(Index[0]),len(Sel_ID[0])
+		if  len(time[Snap:]) < 3:	break	
+		Ab_Time = time[(Snap+1):]
+		Ab_Time =  abs(-time[(Snap+1):] + time[Snap] - dT)
+		Snap = np.where(min(Ab_Time) == Ab_Time)[0][0]+(Snap+1)
+		#Snap +=1
+		Snap2_4 = Snap2_3
+		Snap2_3 = Snap2_2
+		Snap2_2 = Snap2
+		Snap2 = Snap - D.End_Snap 
+		
+		
+	return np.array(Angle),np.array(Angle2)
+
+def HISTO_2D(ID,J,DO_MillSnap = False, Add = ''):
+    # THE DO_MILLSNAP IS NOT READY, IS TO MAKE CONSIDE THE SNAPSHOT TIMES TO THE ONES IN THE MILL. SIM.
+    # NOTE, IT ACTUALLY WORKS, BUT HAVE NOT BEEN TESTED, USED UNDER YOUR OWN RISK
+    if Add != '':	Add = '_'+Add
+    if DO_MillSnap:
+        Snap01 = D.LSnap[-1] - D.End_Snap
+        Snap02 = D.LSnap[-2] - D.End_Snap
+        Snap03 = D.LSnap[-3] - D.End_Snap
+    else:
+        Snap01 = D.Init_Snap - D.End_Snap
+        Snap02 = Snap01 - 1
+        Snap03 = Snap02 - 1
+    ID_to_Look = np.where(ID[Snap03] > -1)
+    Angl1 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE FIRST TWO SNAPSHOTS
+    Angl2 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE SECOND AND THIRD SNAPSHOT
+    Angl3 = [] # THE CHANGE OF ANGLE OF J BETWEEN THE FIRST AND THIRD SNAPSHOT
+    Angl4 = [] # THE CHANGE OF ANGLE BETWEEN THE FIRST AND THIRD SNAPSHOT IN CASE
+               # OF A RANDOM ORIENTATION BETWEEN THE ANGELS
+    CAngl = [] # NOT IN USE!
+    IDs = 0
+    ##
+    for i in ID_to_Look[0]:
+        Angl1.append(M.Angle(J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2]))
+        Angl2.append(M.Angle(J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
+        Angl3.append(M.Angle(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
+        CAngl.append(CAngle(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],J[Snap02][i][0],J[Snap02][i][1],J[Snap02][i][2],J[Snap03][i][0],J[Snap03][i][1],J[Snap03][i][2]))
+        # I CALCULATE THE CHANGE OF ANGLE BETWEEN THE SNAPSHOT
         ########
-        #IDs += 1
-    #if not DO_MillSnap: P.Print_Basic2([Angl1,Angl2,Angl3,Angl4,CAngl],'Data_2DHisto/2D_Histo_Data.txt') 
-    #else: P.Print_Basic2([Angl1,Angl2,Angl3,Angl4,CAngl],'Data_2DHisto/2D_Histo_Data_MillTime.txt')
-    
-    
-    
+        Rand_Jx1,Rand_Jy1,Rand_Jz1 =  M.Ang_Rand(J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2],Angl1[IDs])
+        Rand_Jx2,Rand_Jy2,Rand_Jz2 =  M.Ang_Rand(Rand_Jx1,Rand_Jy1,Rand_Jz1,Angl2[IDs])
+        Angl4.append(M.Angle(Rand_Jx2,Rand_Jy2,Rand_Jz2,J[Snap01][i][0],J[Snap01][i][1],J[Snap01][i][2]))
+        # I CALCULATE THE CHANGE OF ANGLE BETWEEN THE SNAPSHOT FOR RANDOM ORIENTATED ANGLES (SEE EXPLANATION OF RANDOM ANGLE IN THE NEXT CELL)
+        #######
+        IDs += 1
+    if not DO_MillSnap: P.Print_Basic2([Angl1,Angl2,Angl3,Angl4,CAngl],'Data_2DHisto/2D_Histo_Data'+Add+'.txt') 
+    else: P.Print_Basic2([Angl1,Angl2,Angl3,Angl4,CAngl],'Data_2DHisto/2D_Histo_Data_MillTime'+Add+'.txt')
+
+def Top_Index(Mass,J,NBin = 40,xmin = 3,xmax = 7,bar = 0.2):
+	Mass2 = np.log10(Mass+1e-10)
+	J_mod = J[:,0]**2 +J[:,1]**2 +J[:,2]**2
+	Axis,Bar = BarsV2(xmin,xmax,NBin,Mass2,J_mod,bar = bar)
+	index = Get_Index(xmin,xmax,NBin,Mass2)
+	return np.where((index >= 0) & (index < NBin) & (J_mod > Bar[index,1]))
+	
+def BarsV2(Xmin,Xmax,NBin,X,Y,bar = 0.2):
+	Axis = []
+	Data = []
+	for i in range(NBin):	
+		Data.append([])
+		Axis.append(Xmin + (i+0.5)*(Xmax-Xmin)/float(NBin))
+	for i in range(len(X)):
+		index = int(NBin*(X[i]-Xmin)/(Xmax-Xmin))
+		if index >= 0 and index < NBin:	Data[index].append(Y[i])
+	for i in range(NBin):	Data[i].sort()
+	Data2 = [[],[],[]]
+	for i in range(NBin):	
+		if len(Data[i]) > 4:
+			Data2[1].append(Data[i][int(len(Data[i])*bar)])
+			Data2[0].append(Data[i][int(len(Data[i])/2.)])
+			Data2[2].append(Data[i][int(len(Data[i])*(1-bar))])
+		elif len(Data[i]) > 0:
+			Data2[1].append(min(Data[i]))
+			Data2[0].append(np.median(Data[i]))
+			Data2[2].append(max(Data[i]))
+		else:
+			Data2[1].append(-99)
+			Data2[0].append(-99)
+			Data2[2].append(-99)
+	return Axis,np.array(Data2 ).T 
+
+def Get_Index(Xmin,Xmax,NBin,X):
+	X2 = np.array(X)
+	Index = NBin*(X-Xmin)/(Xmax-Xmin)
+	return Index.astype(int)
+	
+	
     
